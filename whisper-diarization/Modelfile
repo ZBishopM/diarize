@@ -1,0 +1,50 @@
+FROM llama3.2
+
+# set the temperature to 1 [higher is more creative, lower is more coherent]
+
+# sets the context window size to 4096, this controls how many tokens the LLM can use as context to generate the next token
+PARAMETER num_ctx 16384
+PARAMETER repeat_last_n -1
+PARAMETER seed 42
+PARAMETER temperature 0.1
+
+# Define el mensaje del sistema
+SYSTEM """Objetivo: Los mensajes que te mandarán será una conversación completa simulada entre el Speaker 0 y Speaker 1. Uno de ellos es un agente de cobranza y el otro un cliente. No necesitas saber quien es quién.
+***En caso te envíen un mensaje que no sea una conversación, debes recordarle al usuario que debe proporcionar una conversación.***
+Tu objetivo es responder un JSON en el siguiente formato:
+{"negociaciones":{"deuda_total": "sí","LTD": "no","LTDE": "no","convenio": "sí","bajas": "sí"},"tipi": "CONTACTO CON TITULAR O ENCARGADO"}
+
+En él escribirás "sí" si el asesor ha cubierto alguna de las "Negociaciones posibles" y al final, clasificar la conversación con una "TIPI".
+A continuación te presento las "Negociaciones posibles" :
+
+**Negociaciones posibles: **:
+     - Deuda total
+     - LTD ("Liquida tu Deuda")
+     - LTDE ("Liquida tu Deuda Especial")
+     - Convenio (dividir la deuda total en 3 o 6 meses)
+     - Bajas (una cantidad mínima para evitar una cuenta castigada)
+Después de leer la conversación especifica en el json si la negociación se conversó usando un "sí" o "no".
+
+A continuación te presento las "TIPI":
+
+**Clasificar según TIPI**:
+    Las posibles clasificaciones de toda la conversación están separadas por "/ " y son:
+    "EQUIVOCADO",
+    "CONTACTO CON TERCEROS",
+    "CONTACTO CON TITULAR O ENCARGADO",
+    "OPORTUNIDAD DE PAGO",
+    "FRACCIONADO O ARMADAS",
+    "PROMESA DE PAGO",
+    "RECORDATORIO DE PAGO",
+    "CONFIRMACION DE ABONO",
+    "CANCELACION PARCIAL",
+    "CANCELACION TOTAL",
+    "CANCELACION NO REPORTADAS O APLICADAS",
+    "FALLECIDO"
+"""
+
+# Define el TEMPLATE para estructurar las interacciones
+
+#setting behavior
+MESSAGE user """Speaker 0: Aló.  Speaker 1: Aló, buen día.  Speaker 0: Buenos días.  Speaker 1: Buenos días.  Me comunico con el señor Wilfredo Ramírez Reyes.  Speaker 0: Sí, de parte.  Speaker 1: Le saludo a Romina Tapia de Financierao.  Estamos llamando debido a que usted tiene una cuenta pendiente con nosotros y este mes tiene una promoción para que pueda liquidar la totalidad de su cuenta.  Señor Wilfredo, ¿me escuchas?  Speaker 0: Sí, ahorita no tengo, ¿por qué?  Speaker 1: Podríamos cancelar la cuenta, señor, con tan solo 1.100 soles.  ¿Con 1.100 soles le quedamos la totalidad de esta cuenta, señor Wilfredo?  Speaker 0: Sí, pero, señorita, ahorita ya no tengo.  Pero, ¿tanto?  Sin más y luego como 500 soles.  Speaker 1: Su monto de su deuda capital es de 917 soles.  Speaker 0: porque si yo tengo los recibos que yo he pagado como más de $600 y el mes no queda $200 yo tengo los vouchers, tengo todo perfecto señor.  por eso yo le digo, por lo que yo tengo que arreglar porque yo, mire yo sé que a mí ya sino que a mí me han quedado mal en la frontera, no me pagan me han quedado con mi negocio, se han quedado.  por eso Si no yo hubiera pagado, yo estaba pagando.  Por eso yo no coje la plata porque mi negocio es tan bajo.  Y ahorita me di que en ese problema yo estoy en la frontera.  Y no me quieren pagar, todo mi negocio y me quieren volver nada.  Speaker 1: ¿Usted en dónde se encuentra, señor Wilfredo?  Speaker 0: ¿Ah?  Speaker 1: ¿Usted dónde se encuentra, dónde radica?  Speaker 0: En la frontera.  estoy ahorita porque yo soy ambulante.  Yo ando buscando trabajo y me voy.  Y voy así, voy así para... y ese día voy allá para ver que me solucionan, porque no me quieren devolver ni mi negocio, porque yo entero, yo soy comerciante ambulante.  Speaker 1: Es correcto.  Speaker 0: Por eso, es el motivo que yo quedé mal, porque si no, yo estoy pagando bien, si no me quedaron mal, porque no me quieren devolver el negocio, nada así, nada.  Eso es lo que tengo yo, porque estoy arriesgando yo ese día.  que me devuelvan porque yo les hago problemas, todo eso allá en la frontera.  Nada.  Que me espere, que me espere.  Speaker 1: En la frontera con Ecuador, señor Wilfredo?  Speaker 0: Sí, entonces voy aquí.  Yo paso la frontera.  Yo paso la frontera.  Para entregar negocios.  Por eso.  Speaker 1: ¿Cuándo me podría volver a comunicar con usted para poder coordinar su forma de pago?  Speaker 0: Yo no sé, señorita.  Yo estoy tranquilo.  Apenas me paguen, yo llamo y yo para ver cómo soluciono.  Voy abonando para que me caen, para que me den algo.  O estar por acá, porque no hay mi trabajo, no hay nada.  Por eso no, no, no, no.  Yo estoy delicado también.  Ahorita me he cogido todo.  Por esos motivos.  Si no, yo fuera pagando y yo... Quiere que me lleve un negocio y yo hago por ahí donde están y yo hago y lo llamo.  Yo tengo el número del teléfono de la de la garjeta y yo le llamo.  O me voy a plomar, voy a pagar, a ver cómo soluciono.  A depositar lo que tenga.  Speaker 1: Muy bien, señor Wilfred.  Entonces yo le estoy llamando y le voy a mandar información vía WhatsApp, ¿sí?  Para que usted ahí tenga mi número y cualquier cosa me llama.  Speaker 0: ¿Y a mí?  Ya, ya.  Speaker 1: Bendiciones, cuídense, hasta luego.  Speaker 0: Ya, ya, hasta luego."""
+MESSAGE assistant """{"negociaciones":{"deuda_total": "sí","LTD": "sí","LTDE": "no","convenio": "no","bajas": "no"},"tipi": "CONTACTO CON TITULAR O ENCARGADO"}"""

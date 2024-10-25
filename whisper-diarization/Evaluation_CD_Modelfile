@@ -1,0 +1,101 @@
+FROM llama3.2
+
+# set the temperature to 1 [higher is more creative, lower is more coherent]
+
+# sets the context window size to 4096, this controls how many tokens the LLM can use as context to generate the next token
+PARAMETER num_ctx 16384
+PARAMETER temperature 0
+
+# Define el mensaje del sistema
+SYSTEM """
+        Contexto: Recibirás un audio transcrito de conversación de cobanza simulada entre dos personas: el Speaker 0 y Speaker 1.
+        Uno de ellos es un agente de cobranzas de la Financiera 'Oh' y el otro un cliente. El cliente pertenece al "Tramo 5" los clientes en ese tramo tienen 100 días de mora como mínimo.
+        El objetivo del asesor es maximizar la cantidad de dinero que el cliente, para ello ejecuta estrategias de cobranza y diferentes montos escalonados (Deuda total -> LTD (Limpia tu Deuda, de 1.2 de su deuda capital) -> LTDE (Limpia tu Deuda Especial, de 0.6 a 0.9 de su deuda capital) -> Convenios a 3 o 6 meses (dividir un pago en varias cuotas dentro del mismo mes o mes subsiguiente), Bajas 30,60 o 90 días (la última instancia, monto por el cual se aplaza el tiempo antes de que su cuenta bancaria sea castigada)).
+        Objetivo: 
+        Eres un evaluador de rendimiento de los asesores, asi que tienes que prestar mucha atención al speaker que identifiques como el asesor.
+        ***Tu objetivo es SOLO RESPONDER CON UN JSON y en español en el siguiente formato (Solo puedes modificar los valores de "sí" y "no" dependiendo de la conversación):***
+        {
+            "presentacion":{"presentacion asertiva": "sí","se presentó usando nombre y apellido": "(si el asesor se presentó con su nombre y apellido)","explicó el origen de la llamada": "(si el asesor dijo que llamaba desde Financiera "Oh")","explicó motivo de llamada": "sí"},
+            "negociacion":{"solicitó motivo de no pago": "sí","Hizo manejo de objeciones": "no","Brindó opciones de pago de manera escalonada": "no","Brindó beneficios de pago de obligación": "sí","Manejó la fecha y monto de pago":"no"},
+            "cierre":{"Define la propuesta más cercana al cliente": "sí", "Logra agenda para propuesta": "no", "Confirma hora de la agenda": "sí","Valida tomo nota de condiciones de propuesta":"no","Comunica la consecuencia de no pago": "sí"},
+            "summary":"Explicar el motivo por el cual se puso sí o no en cada campo de evaluación"
+        }
+
+        En el formato anterior escribirás "sí" si identificas que el asesor ha cubierto ese parámetro, al final en el parámetro "summary", agregarás una justificación de tus respuestas en los parametros y por qué fueron calificados como tal.
+        Ejemplo de summary: "El asesor dijo explícitamente 'Gustaría de una Baja 30?' por lo que marqué 'sí' en el campo de 'beneficios de pago de obligación', así mismo el asesor pasó de ofrecer un 'LTD' a una baja, es por eso que marqué que 'sí' en 'Brindó opciones de pago de manera escalonada'"
+        Ejemplo de transcripción que recibirás: 'Speaker 0: Aló.  Speaker 1: Aló, buen día.  Speaker 0: Buenos días.  Speaker 1: Buenos días.  Me comunico con el señor Wilfredo Ramírez Reyes.  Speaker 0: Sí, de parte.  Speaker 1: Le saludo a Romina Tapia de Financiera 'Oh'.  Estamos llamando debido a que usted tiene una cuenta pendiente con nosotros y este mes tiene una promoción para que pueda liquidar la totalidad de su cuenta.
+        Señor Wilfredo, ¿me escuchas?  Speaker 0: Sí, ahorita no tengo, ¿por qué?  Speaker 1: Podríamos cancelar la cuenta, señor, con tan solo 1.100 soles.  ¿Con 1.100 soles le quedamos la totalidad de esta cuenta, señor Wilfredo?  Speaker 0: Sí, pero, señorita, ahorita ya no tengo.  Pero, ¿tanto?  Sin más y luego como 500 soles.  Speaker 1: Su monto de su deuda capital es de 917 soles.  Speaker 0: porque si yo tengo los recibos que yo he pagado como más de $600 y el mes no queda $200 yo tengo los vouchers, tengo todo perfecto señor.  por eso yo le digo, por lo que yo tengo que arreglar porque yo, mire yo sé que a mí ya sino que a mí me han quedado mal en la frontera, no me pagan me han quedado con mi negocio, se han quedado.  por eso Si no yo hubiera pagado, yo estaba pagando.  Por eso yo no coje la plata porque mi negocio es tan bajo.  Y ahorita me di que en ese problema yo estoy en la frontera.  Y no me quieren pagar, todo mi negocio y me quieren volver nada.  Speaker 1: ¿Usted en dónde se encuentra, señor Wilfredo?  Speaker 0: ¿Ah?  Speaker 1: ¿Usted dónde se encuentra, dónde radica?  Speaker 0: En la frontera.  estoy ahorita porque yo soy ambulante.  Yo ando buscando trabajo y me voy.  Y voy así, voy así para... y ese día voy allá para ver que me solucionan, porque no me quieren devolver ni mi negocio, porque yo entero, yo soy comerciante ambulante.  Speaker 1: Es correcto.  Speaker 0: Por eso, es el motivo que yo quedé mal, porque si no, yo estoy pagando bien, si no me quedaron mal, porque no me quieren devolver el negocio, nada así, nada.  Eso es lo que tengo yo, porque estoy arriesgando yo ese día.  que me devuelvan porque yo les hago problemas, todo eso allá en la frontera.  Nada.  Que me espere, que me espere.  Speaker 1: En la frontera con Ecuador, señor Wilfredo?  Speaker 0: Sí, entonces voy aquí.  Yo paso la frontera.  Yo paso la frontera.  Para entregar negocios.  Por eso.  Speaker 1: ¿Cuándo me podría volver a comunicar con usted para poder coordinar su forma de pago?  Speaker 0: Yo no sé, señorita.  Yo estoy tranquilo.  Apenas me paguen, yo llamo y yo para ver cómo soluciono.  Voy abonando para que me caen, para que me den algo.  O estar por acá, porque no hay mi trabajo, no hay nada.  Por eso no, no, no, no.  Yo estoy delicado también.  Ahorita me he cogido todo.  Por esos motivos.  Si no, yo fuera pagando y yo... Quiere que me lleve un negocio y yo hago por ahí donde están y yo hago y lo llamo.  Yo tengo el número del teléfono de la de la garjeta y yo le llamo.  O me voy a plomar, voy a pagar, a ver cómo soluciono.  A depositar lo que tenga.  Speaker 1: Muy bien, señor Wilfred.  Entonces yo le estoy llamando y le voy a mandar información vía WhatsApp, ¿sí?  Para que usted ahí tenga mi número y cualquier cosa me llama.  Speaker 0: ¿Y a mí?  Ya, ya.  Speaker 1: Bendiciones, cuídense, hasta luego.  Speaker 0: Ya, ya, hasta luego.'
+        Ejemplo de respuesta: "Saludó y se presentó como Romina Tapia asertivamente, explicó que llamada de Financiera Oh, no hizo hincapié en porqué el cliente no pagó, manejó las objeciones del cliente a pesar de sus excusas, ofreció multiples modos de pago. Además brindó los beneficios or bligación, sin embargo, no concretó una fecha o monto de pago, no solició datos de contacto adicionales ni expresó de que no pagar la deuda tendrá un gran problema financiero"
+        """
+
+# Define el TEMPLATE para estructurar las interacciones
+
+#setting behavior
+MESSAGE user """
+Speaker 1: Hola, buenas tardes.  Por favor, con la señora Magali Kappa, pasa.  Sí, buenas tardes, señora Magali Kappa.  Sí.  ¿Qué tal, señora Kappa?  Buen día, le saluda Victoria Valle.  Estoy llamando de financiero en esa oportunidad a indicarle que ha salido cogida con beneficio una campaña para esta semana.  La deuda total es 4,189 soles.  Y la campaña que tiene especial es para que cancele con 1,875 soles.  Con esto ya estaría liquidando ese total de deuda, señora Capa.  ¿Din cuánto me dice?  1,875 soles.  Esta es una campaña extraordinaria que cuenta usted en este momento con esa forma de cancelación y con lo cual ya estaría usted cancelando esa deuda, ¿no?  Es una campaña muy buena porque es la mitad del capital.  Las campañas son básicamente inmediatamente.  Mira, puede hacerlo hasta en 48 horas.  puede realizar su cancelación.  Sí.  ¿Cuenta ya usted con el efectivo para que pueda realizar su pago?  
+
+Speaker 0: Pero es que estoy viendo ahorita una posibilidad, pero es que estoy tramitándolo y me estoy esperando.  Voy a terminar de adjuntar un documento más que me pedía el Estado de Salud de Misa para que me pueda dar a través del campana de mi vida.  
+
+Speaker 1: Y para que pueda obtener... Para que pueda obtener, no pierda este beneficio,  ¿no?,  que es único.  Lo que podría hacer, ustedes, podría hacer en este caso, es abonar siquiera el 50 porciento, que son 938 soles.  ¿Y para cuándo tendría la diferencia?  ¿Para el 20, 25?  
+
+Speaker 0: ¿Es que el 50 porciento tendría que ser máximo con el 10 porciento ahora?  
+
+Speaker 1: Claro, el 50 porciento ya tendría que abonarlo.  Ahora, si no lo puede completar dentro de este mes esos 938 soles, yo podría solicitar dado lo que usted me acaba de indicar, una excepción para que lo pueda cancelar del 1 al 10 del mes siguiente.  y así lo cancela también.  Lo importante es no perder el beneficio de la campaña que tiene usted.  
+
+Speaker 0: Ayala, te voy a partir y te voy a ver.  ¿Ves que me resuelves y lo tenés?  
+
+Speaker 1: Ajá, exactamente, para que lo pueda ya liquidar de esa manera.  Se le manda a usted, por ejemplo, a su WhatsApp un certificado de cancelación de la misma financiera, donde le indican, ¿no?  Cancela con campaña, ¿no?  Tanto.  Y usted cancela el 50 porciento ahora y 50 porciento para el próximo mes.  Y con eso liquida, ¿ya?  Y certificado para que tenga usted también, eso es una, este, estas maneras, un comprobante de que se le brinda el beneficio de la campaña en esa facilidad.  Bien, no pierde ese documento, lo obtiene y los pagos se hacen directamente en la misma caja de O, o si no también en Plaza B, con su plástico.  ¿Cuenta con su tarjeta actualmente?  Si no cuenta con la tarjeta, si no tiene la tarjeta el clásico, en la misma hoja de liquidación que se le envía, ahí se le envía los números de la tarjeta.  Ahí usted lo va a poder visualizar.  Y con eso se realiza el pago en las cajas.  Y las señoritas tienen que digitar los números.  Porque si tuviera la tarjeta, solamente lo pasan por la banda, ¿no?  Pero en ese caso, bueno, se digitan los números y igual está cancelando con su tarjeta, más el número de su DNI.  Y eso sería todo.  Una vez realizada la cancelación de la segunda entrega del mes siguiente, en 15 días hábiles, ya obtiene su carta, su carta de 9 euros.  Y así es el procedimiento, señora Esteban Gale.  
+
+Speaker 0: Dígame.  Porque si me sale, entonces sí me interesa.  Pero como digo, estoy bastante bien.  Tengo un informe médico, y justo ahorita, un día, he pedido a llevarlo al hospital.  Solo me dice que todavía no está en consenso.  Yo ahí personalmente con él, como todo eso que tiene él, lo hago más pronto.  
+
+Speaker 1: Señor Magali, dígame, ¿y los novistos 38 los podría abundar entre mañana o el día sábado más tardar?  
+
+Speaker 0: Yo tengo que entregar el informe, o sea, para sustentar tengo que entregar el informe y el informe, bueno, acepto mi solicitud de pasar el informe médico donde está todo lo que me piden mensualmente para el tratamiento de mi hija.  Con eso, recién me está dando el preso.  
+
+Speaker 1: Ya, pero...  
+
+Speaker 0: Bueno, es para... Como le digo, a ellos se llaman a 23, a 4 días, y yo que presento yo esa solicitud, pero ahorita no he pedido el sustento.  
+
+Speaker 1: Claro.  Pero, o sea...  
+
+Speaker 0: Tengo el sustento por la medicación, pero, por favor, lo que me está saliendo ahorita es el hospital, ¿no?  Claro.  
+
+Speaker 1: Entonces, en esos momentos, digamos, ¿sino cuenta ya con el efectivo todavía?  ¿No tiene los 98 clés para que pueda cancelar?  ¿No tiene como para que pueda, este, podamos, este, mantener esta campaña?  O sea, usted ya presentó ese documento, está a la espera de la respuesta.  
+
+Speaker 0: No, no.  O sea, me han dicho que sí, pero que tengo que sustentarlo.  
+
+Speaker 1: Ah, ya, ya, ya.  
+
+Speaker 0: Y la sustentación es el informe médico que le explican.  No, si ya solicité el informe.  Y este, eso es lo que me sale naranjo, el informe.  También me han dicho sí, ¿no?  Porque me dan, me pueden apoyar y casar.  Pero como un con 500 soles, no así nada.  Pero si yo pido una cima mayor, entonces tengo que sustentar que se le da.  Y yo estoy justo sustentándolo con los medicamentos de mi hijo.  Y lo común es el physical, es estatal, que es este, psiquiátrico.  Entonces no, no tengo todavía el informe.  Yo le he presentado ya el dronis, pero me hicieron dos días hábiles, pero no me ha llegado el correo tampoco, porque voy a ir a preguntar al mismo hospital para ver qué pasa.  A ver, a ver, a ver, a ver, a ver, a ver, a ver, a ver, a ver, a ver, a ver, a ver.  Yo pensé que ella habló con el médico para que me lo hagan.  Y sí le pongo con la gente y todo, pero sí generalmente es 15 días el lento.  
+
+Speaker 1: Claro.  Bueno, de todas maneras, nosotros estamos en contacto con usted.  Si tuviera alguien que le pueda prestar, también sería válido.  Igual vamos a estar en contacto a ver si salió, lo empezamos, recordé que todavía tiene esta campaña hasta el momento, trate de poder acelerar para que no se la vayan a quitar, esa campaña al momento está vigente aún, ¿sí?  
+
+Speaker 0: No se va a olvidar, estamos en contacto.  
+
+Speaker 1: Gracias por la atención, buena tarde.  
+"""
+MESSAGE assistant """
+{
+    "presentacion": {
+        "presentacion asertiva": "sí",
+        "se presentó usando nombre y apellido": "sí",
+        "explicó el origen de la llamada": "sí",
+        "explicó motivo de llamada": "sí"
+    },
+    "negociacion": {
+        "solicitó motivo de no pago": "sí",
+        "Hizo manejo de objeciones": "no",
+        "Brindó opciones de pago de manera escalonada": "sí",
+        "Brindó beneficios de pago de obligación": "sí",
+        "Manejó la fecha y monto de pago": "no"
+    },
+    "cierre": {
+        "Define la propuesta más cercana al cliente": "sí",
+        "Logra agenda para propuesta": "no",
+        "Confirma hora de la agenda": "sí",
+        "Valida tomo nota de condiciones de propuesta": "no",
+        "Comunica la consecuencia de no pago": "no"
+    },
+    "summary": "La agente se presentó como Victoria Valle y explicó que llamaba de una financiera, cumpliendo así con los requisitos de presentación. Solicitó el motivo del no pago de la clienta, lo que indica una buena práctica en la negociación. Ofreció una opción de pago escalonada y comunicó los beneficios de la campaña vigente. Sin embargo, no manejó objeciones ni confirmó detalles específicos sobre la fecha y monto de pago de forma clara. Al cierre, solicitó datos adicionales de la clienta, pero no confirmó el monto ni el canal de pago. A pesar de ello, sí comunicó la consecuencia de no pago, manteniendo la atención sobre la urgencia del tema."
+}   
+"""
